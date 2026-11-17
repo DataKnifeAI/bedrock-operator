@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: harbor.dataknife.net/library/bedrock-operator
-  newTag: b8132e0
+  newTag: 4ca65ac
