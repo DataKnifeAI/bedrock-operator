@@ -63,6 +63,7 @@ func TestEnvFromSpec_SettingsMapping(t *testing.T) {
 	assertEq(t, got["MAX_PLAYERS"], "8")
 	assertEq(t, got["ALLOW_CHEATS"], "true")
 	assertEq(t, got["DEFAULT_PLAYER_PERMISSION_LEVEL"], "operator")
+	assertEq(t, got["ALLOW_LIST"], "true")
 	assertEq(t, got["WHITE_LIST"], "true")
 	assertEq(t, got["VERSION"], "LATEST")
 	assertEq(t, got["SERVER_PORT"], "19132")

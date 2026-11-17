@@ -355,7 +355,8 @@ spec:
                     minimum: 1024
                     type: integer
                   whiteList:
-                    description: WhiteList maps to WHITE_LIST.
+                    description: WhiteList maps to ALLOW_LIST (Bedrock 1.26+) and
+                      WHITE_LIST (older images).
                     type: boolean
                 type: object
               terminationGracePeriodSeconds:

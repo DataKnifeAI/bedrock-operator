@@ -75,6 +75,8 @@ func EnvFromSpec(spec bedrockv1alpha1.BedrockServerSpec, fallbackLevelName strin
 		{Name: "MAX_PLAYERS", Value: strconv.FormatInt(int64(maxPlayers), 10)},
 		{Name: "ALLOW_CHEATS", Value: boolStr(s.AllowCheats)},
 		{Name: "DEFAULT_PLAYER_PERMISSION_LEVEL", Value: perm},
+		// Bedrock 1.26+ uses allow-list / ALLOW_LIST; WHITE_LIST remains for older images.
+		{Name: "ALLOW_LIST", Value: boolStr(s.WhiteList)},
 		{Name: "WHITE_LIST", Value: boolStr(s.WhiteList)},
 		{Name: "SERVER_PORT", Value: strconv.FormatInt(int64(port), 10)},
 		{Name: "SERVER_PORT_V6", Value: strconv.FormatInt(int64(portV6), 10)},

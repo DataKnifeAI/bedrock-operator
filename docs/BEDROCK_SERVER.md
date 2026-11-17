@@ -62,7 +62,7 @@ BedrockConnect companion later.
 | `settings.maxPlayers` | `MAX_PLAYERS` |
 | `settings.allowCheats` | `ALLOW_CHEATS` |
 | `settings.defaultPlayerPermissionLevel` | `DEFAULT_PLAYER_PERMISSION_LEVEL` |
-| `settings.whiteList` | `WHITE_LIST` |
+| `settings.whiteList` | `ALLOW_LIST` and `WHITE_LIST` (1.26+ uses allow-list) |
 | `settings.serverPort` | `SERVER_PORT` (default 19132) |
 | `settings.ipv6Enabled` | enables `SERVER_PORT_V6` + second UDPRoute |
 

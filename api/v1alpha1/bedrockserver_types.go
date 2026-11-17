@@ -133,7 +133,7 @@ type ServerSettings struct {
 	// +optional
 	DefaultPlayerPermissionLevel string `json:"defaultPlayerPermissionLevel,omitempty"`
 
-	// WhiteList maps to WHITE_LIST.
+	// WhiteList maps to ALLOW_LIST (Bedrock 1.26+) and WHITE_LIST (older images).
 	// +optional
 	WhiteList bool `json:"whiteList,omitempty"`
 
