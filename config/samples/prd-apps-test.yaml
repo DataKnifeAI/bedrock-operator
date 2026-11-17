@@ -1,0 +1,52 @@
+# Production-shaped deploy for prd-apps game-servers (Envoy Gateway UDP + NetherNet TCP).
+# kubectl apply -f config/samples/prd-apps-test.yaml
+apiVersion: bedrock.dataknife.ai/v1alpha1
+kind: BedrockServer
+metadata:
+  name: bedrock-server
+  namespace: game-servers
+  labels:
+    app.kubernetes.io/name: bedrock-server
+    app.kubernetes.io/instance: bedrock-server
+spec:
+  eula:
+    accepted: true
+
+  serverImage:
+    image: itzg/minecraft-bedrock-server:latest
+    pullPolicy: IfNotPresent
+
+  version:
+    mode: LATEST
+
+  settings:
+    levelName: survival-1
+    gameMode: survival
+    difficulty: normal
+    maxPlayers: 10
+    allowCheats: false
+    defaultPlayerPermissionLevel: member
+    whiteList: false
+    ipv6Enabled: false
+
+  secrets:
+    generateSecrets: true
+
+  persistence:
+    size: 8Gi
+    storageClassName: truenas-csi-nfs
+
+  update:
+    checkInterval: 6h
+    notifyOnly: true
+
+  gateway:
+    enabled: true
+    address: "192.168.14.190"
+    className: envoy
+
+  nodeSelector:
+    kubernetes.io/arch: amd64
+    kubernetes.io/os: linux
+
+  terminationGracePeriodSeconds: 60
