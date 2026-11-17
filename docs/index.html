@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bedrock Operator — DataKnifeAI</title>
+  <meta name="description" content="Host a Minecraft Bedrock Dedicated Server on Kubernetes. Declare a BedrockServer CR and share a VIP:port with players." />
+  <meta property="og:title" content="Bedrock Operator — DataKnifeAI" />
+  <meta property="og:description" content="Kubernetes operator for Minecraft Bedrock Dedicated Server — cuboid worlds on a VIP." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/hero-bedrock.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/landing.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="hero" id="top">
+    <div class="hero__media" aria-hidden="true">
+      <img
+        class="hero__photo"
+        src="assets/hero-bedrock.jpg"
+        alt=""
+        width="1280"
+        height="720"
+        decoding="async"
+        fetchpriority="high"
+      />
+      <div class="hero__veil"></div>
+      <div class="hero__ember"></div>
+    </div>
+
+    <div class="hero__content">
+      <p class="brand">
+        <span class="brand__name">Bedrock Operator</span>
+        <span class="brand__by">by DataKnifeAI</span>
+      </p>
+      <h1 class="hero__title">Hold a cuboid world. Let friends Add Server.</h1>
+      <p class="hero__lede">
+        One <code>BedrockServer</code> CR hosts Mojang’s Bedrock Dedicated Server on Kubernetes —
+        so your crew can join from PC, console, mobile, or Linux.
+      </p>
+      <div class="cta">
+        <a class="btn btn--primary" href="https://github.com/DataKnifeAI/bedrock-operator">View on GitHub</a>
+        <a class="btn btn--ghost" href="#client">Get a client</a>
+        <a class="btn btn--ghost" href="#connect">How to connect</a>
+        <a class="btn btn--ghost" href="BEDROCK_SERVER.md">Server guide</a>
+        <a class="btn btn--ghost" href="ARCHITECTURE.md">Architecture</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="wave" aria-hidden="true">
+    <svg viewBox="0 0 1440 72" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 30 C240 68 460 6 720 36 C980 70 1220 10 1440 34 L1440 72 L0 72 Z" fill="#f1f4ef" />
+      <path d="M0 46 C200 16 420 64 720 42 C1040 18 1260 60 1440 44 L1440 72 L0 72 Z" fill="#e8ebe6" opacity="0.95" />
+    </svg>
+  </div>
+
+  <main id="main">
+    <section class="section section--promise" aria-labelledby="promise-heading">
+      <div class="wrap">
+        <div class="section__intro">
+          <h2 id="promise-heading">Built for hosting a world</h2>
+          <p class="section__lede">
+            Not a game storefront — an operator that stands up the dedicated server your players join.
+          </p>
+        </div>
+
+        <ul class="pillars">
+          <li class="pillars__item">
+            <h3>Declare × Reconcile</h3>
+            <p>Apply a CR. The controller builds StatefulSet, PVC, Services, and Envoy Gateway UDP/TCP routes.</p>
+          </li>
+          <li class="pillars__item">
+            <h3>EULA × Download</h3>
+            <p>We never redistribute Mojang binaries. The itzg image downloads BDS at startup after <code>spec.eula.accepted</code>.</p>
+          </li>
+          <li class="pillars__item">
+            <h3>Join × Survive</h3>
+            <p>Players Add Server with <code>status.connectionAddress:connectionPort</code> — you keep the cluster side.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section--how" aria-labelledby="how-heading">
+      <div class="wrap">
+        <div class="section__intro">
+          <h2 id="how-heading">How it works</h2>
+          <p class="section__lede">Three steps from CRD to a running world.</p>
+        </div>
+
+        <ol class="steps">
+          <li class="steps__item">
+            <div class="steps__icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="18" width="44" height="34" rx="4" fill="#f1f4ef" stroke="#243028" stroke-width="3" />
+                <rect x="18" y="10" width="28" height="14" rx="3" fill="#dce8df" stroke="#243028" stroke-width="2.5" />
+                <circle cx="24" cy="34" r="4" fill="#3d8f4a" />
+                <circle cx="32" cy="34" r="4" fill="#9a7340" />
+                <circle cx="40" cy="34" r="4" fill="#4a8fc7" />
+              </svg>
+            </div>
+            <div>
+              <h3>Install the operator</h3>
+              <p><code>make install</code> then <code>make deploy</code> — CRDs, RBAC, and controller land in your cluster.</p>
+            </div>
+          </li>
+          <li class="steps__item">
+            <div class="steps__icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <rect x="14" y="22" width="36" height="28" fill="#9a7340" stroke="#243028" stroke-width="2.5" />
+                <rect x="14" y="14" width="36" height="12" fill="#3d8f4a" stroke="#243028" stroke-width="2.5" />
+                <rect x="26" y="34" width="12" height="16" fill="#5a6860" stroke="#243028" stroke-width="2" />
+              </svg>
+            </div>
+            <div>
+              <h3>Declare a BedrockServer</h3>
+              <p>Accept the EULA, set settings and a Gateway VIP. The reconciler wires the itzg image, storage, and routes.</p>
+            </div>
+          </li>
+          <li class="steps__item">
+            <div class="steps__icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="28" r="13" fill="#3d8f4a" />
+                <circle cx="27" cy="26" r="2.2" fill="#f1f4ef" />
+                <circle cx="37" cy="26" r="2.2" fill="#f1f4ef" />
+                <path d="M27 33 Q32 37 37 33" fill="none" stroke="#f1f4ef" stroke-width="2.2" stroke-linecap="round" />
+                <path d="M18 48 C24 42 40 42 46 48" fill="none" stroke="#4a8fc7" stroke-width="3" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div>
+              <h3>Share the address</h3>
+              <p>Read <code>status.connectionAddress</code> and <code>status.connectionPort</code>, then Add Server in Bedrock.</p>
+            </div>
+          </li>
+        </ol>
+
+        <p class="section__cta">
+          <a href="https://github.com/DataKnifeAI/bedrock-operator/blob/main/config/samples/bedrock_v1alpha1_bedrockserver.yaml">Browse the sample CR →</a>
+        </p>
+      </div>
+    </section>
+
+    <section class="section section--client" id="client" aria-labelledby="client-heading">
+      <div class="wrap wrap--readable">
+        <h2 id="client-heading">Get a Bedrock client</h2>
+        <p class="section__lede section__lede--wide">
+          Players need Minecraft <strong>Bedrock</strong> Edition — not Java alone.
+          Full write-up:
+          <a href="CLIENT.md">docs/CLIENT.md</a>.
+        </p>
+
+        <ul class="ports">
+          <li><span class="ports__label">Windows</span> <span class="ports__value">Microsoft Store / Minecraft Launcher (Java &amp; Bedrock)</span></li>
+          <li><span class="ports__label">Console</span> <span class="ports__value">Xbox / PlayStation / Switch — Friends join or direct IP; BedrockConnect if needed</span></li>
+          <li><span class="ports__label">Mobile</span> <span class="ports__value">Google Play / App Store</span></li>
+          <li><span class="ports__label">Linux</span> <span class="ports__value">mcpelauncher (AUR or Flatpak) — requires Google Play ownership</span></li>
+          <li><span class="ports__label">Java / Prism</span> <span class="ports__value">Does not join Bedrock servers without Geyser (out of scope)</span></li>
+        </ul>
+
+        <pre class="codeblock"><code># Arch / CachyOS
+paru -S mcpelauncher-linux-bin mcpelauncher-ui-bin
+source /etc/profile.d/mcpelauncher-bin.sh   # or new login
+# UI: /opt/mcpelauncher-bin/bin/mcpelauncher-ui-qt</code></pre>
+
+        <p class="fineprint">
+          This operator does not redistribute Mojang client or server binaries.
+          Accept the EULA on the CR; clients come from official storefronts (or mcpelauncher’s Play-owned path).
+        </p>
+      </div>
+    </section>
+
+    <section class="section section--connect" id="connect" aria-labelledby="connect-heading">
+      <div class="wrap wrap--readable">
+        <h2 id="connect-heading">Connect from Bedrock</h2>
+        <p class="section__lede section__lede--wide">
+          Once the CR is Ready, players join from the game client — not from kubectl.
+          See also
+          <a href="BEDROCK_SERVER.md">docs/BEDROCK_SERVER.md</a>.
+        </p>
+
+        <h3 class="subhead">1. Read the address (admins)</h3>
+        <pre class="codeblock"><code>kubectl get bedrockservers -o wide
+# ADDRESS + PORT → status.connectionAddress / connectionPort
+
+kubectl get bedrockserver survival-1 -n game-servers \
+  -o jsonpath='{.status.connectionAddress}:{.status.connectionPort}{"\n"}'</code></pre>
+        <p>
+          Share <code>connectionAddress:connectionPort</code> (default port <strong>19132</strong> UDP).
+          Example: <code>192.168.14.190:19132</code>.
+        </p>
+
+        <h3 class="subhead">2. Add Server</h3>
+        <ol class="guide">
+          <li>Launch <strong>Minecraft</strong> (Bedrock) → <strong>Play</strong> → <strong>Servers</strong>.</li>
+          <li><strong>Add Server</strong> → enter name + the VIP and port from status.</li>
+          <li>Join. Whitelist / permissions are managed on the server console (Phase 2 helpers coming).</li>
+        </ol>
+
+        <h3 class="subhead">3. Why LAN browse fails</h3>
+        <p>
+          Kubernetes does not forward UDP broadcasts. Friends / LAN discovery usually will
+          <strong>not</strong> see the pod. Always use the Gateway VIP:port from status, enable
+          <code>spec.hostNetworkDiscovery</code> (trade-offs), or run a BedrockConnect companion.
+        </p>
+
+        <ul class="ports">
+          <li><span class="ports__label">Game</span> <span class="ports__value">19132 / UDP (default)</span></li>
+          <li><span class="ports__label">IPv6</span> <span class="ports__value">19133 / UDP when <code>settings.ipv6Enabled</code></span></li>
+          <li><span class="ports__label">NetherNet</span> <span class="ports__value">19132 / TCP (Gateway TCPRoute)</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section--faq" id="faq" aria-labelledby="faq-heading">
+      <div class="wrap wrap--readable">
+        <h2 id="faq-heading">FAQ</h2>
+        <div class="faq">
+          <details>
+            <summary>Can Java Edition join?</summary>
+            <p>
+              Not without a proxy such as Geyser — out of scope here. Use a Bedrock client
+              (Windows, console, mobile, or mcpelauncher on Linux).
+            </p>
+          </details>
+          <details>
+            <summary>Do you ship Mojang binaries?</summary>
+            <p>
+              No. The default image downloads Bedrock Dedicated Server at startup.
+              You must set <code>spec.eula.accepted: true</code>.
+            </p>
+          </details>
+          <details>
+            <summary>Why can’t friends see the server on LAN?</summary>
+            <p>
+              Pod networking does not forward UDP broadcasts. Share the VIP:port, or see
+              <a href="BEDROCK_SERVER.md">BEDROCK_SERVER.md</a> for hostNetwork / BedrockConnect notes.
+            </p>
+          </details>
+          <details>
+            <summary>Where are the rest of the docs?</summary>
+            <p>
+              <a href="CLIENT.md">CLIENT.md</a>,
+              <a href="BEDROCK_SERVER.md">BEDROCK_SERVER.md</a>,
+              <a href="ARCHITECTURE.md">ARCHITECTURE.md</a>, and
+              <a href="GITLAB_MIRROR.md">GITLAB_MIRROR.md</a>
+              live under <code>docs/</code> (same paths on GitHub Pages).
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap site-footer__inner">
+      <div class="site-footer__brand">Bedrock Operator</div>
+      <div class="site-footer__links">
+        <a href="https://github.com/DataKnifeAI/bedrock-operator">GitHub</a>
+        <a href="CLIENT.md">Client</a>
+        <a href="ARCHITECTURE.md">Architecture</a>
+        <a href="https://github.com/DataKnifeAI/palworld-operator">Palworld Operator</a>
+        <a href="https://github.com/DataKnifeAI/dragonwilds-operator">Dragonwilds Operator</a>
+        <a href="#top">Back to top</a>
+      </div>
+    </div>
+    <div class="wrap" style="margin-top: 1rem;">
+      <p class="fineprint" style="color: rgba(241, 244, 239, 0.65);">
+        Minecraft is a trademark of Mojang Synergies AB / Microsoft. This project is an independent
+        Kubernetes operator — not an official Mojang or Microsoft product. Hero art is original;
+        no official Minecraft logos or art are used.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

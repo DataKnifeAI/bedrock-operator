@@ -25,6 +25,8 @@ kubectl get bedrockservers -o wide
 ```
 
 Connect clients to `status.connectionAddress`:`status.connectionPort` (default UDP 19132).
+Example: `192.168.14.190:19132`. How to obtain Bedrock on Windows, console, mobile, and
+Linux (mcpelauncher): [CLIENT.md](CLIENT.md).
 
 **LAN discovery** (Friends tab / local network browse) does not work through pod
 networking — UDP broadcasts are not forwarded. Use the VIP:port directly, enable

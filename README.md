@@ -9,6 +9,9 @@ Kubernetes operator for [Minecraft Bedrock Dedicated Server](https://www.minecra
 [dragonwilds-operator](https://github.com/DataKnifeAI/dragonwilds-operator): Go/kubebuilder,
 CRD-first, Envoy Gateway (UDP + NetherNet TCP).
 
+**Site:** [dataknifeai.github.io/bedrock-operator](https://dataknifeai.github.io/bedrock-operator/)  
+**Repos:** [GitHub](https://github.com/DataKnifeAI/bedrock-operator)
+
 **Licensing:** We neither bundle nor redistribute Mojang software. The default image
 [`itzg/minecraft-bedrock-server`](https://github.com/itzg/docker-minecraft-bedrock-server)
 downloads BDS at startup. Users accept the Minecraft EULA via `spec.eula.accepted`.
@@ -20,6 +23,7 @@ settings→env mapping, Mojang update watcher, envtest suite, docs.
 
 ## Docs
 
+- [CLIENT.md](docs/CLIENT.md) — obtain Bedrock clients (Windows, console, mobile, Linux)
 - [BEDROCK_SERVER.md](docs/BEDROCK_SERVER.md) — user guide
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — resource graph & design rules
 - [GITLAB_MIRROR.md](docs/GITLAB_MIRROR.md) — CI / Harbor publish
