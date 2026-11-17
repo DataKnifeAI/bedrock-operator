@@ -18,7 +18,7 @@ spec:
     allowCheats: false
     defaultPlayerPermissionLevel: member
     whiteList: false
-    transport: raknet
+    transport: nethernet
     ipv6Enabled: false
   persistence:
     size: 8Gi

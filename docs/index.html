@@ -72,7 +72,7 @@
         <ul class="pillars">
           <li class="pillars__item">
             <h3>Declare × Reconcile</h3>
-            <p>Apply a CR. The controller builds StatefulSet, PVC, Services, and Envoy Gateway UDP/TCP routes.</p>
+            <p>Apply a CR. The controller builds StatefulSet, PVC, and a VIP Service (NetherNet TCP + gameplay UDP range).</p>
           </li>
           <li class="pillars__item">
             <h3>EULA × Download</h3>
@@ -119,7 +119,7 @@
             </div>
             <div>
               <h3>Declare a BedrockServer</h3>
-              <p>Accept the EULA, set settings and a Gateway VIP. The reconciler wires the itzg image, storage, and routes.</p>
+              <p>Accept the EULA, pin a matching client version, and set a LoadBalancer VIP. The reconciler wires the itzg image, storage, and NetherNet ports.</p>
             </div>
           </li>
           <li class="steps__item">
@@ -190,28 +190,31 @@ source /etc/profile.d/mcpelauncher-bin.sh   # or new login
 kubectl get bedrockserver survival-1 -n game-servers \
   -o jsonpath='{.status.connectionAddress}:{.status.connectionPort}{"\n"}'</code></pre>
         <p>
-          Share <code>connectionAddress:connectionPort</code> (default port <strong>19132</strong> UDP).
-          Example: <code>192.168.14.190:19132</code>.
+          Share <code>connectionAddress:connectionPort</code> (default port <strong>19132</strong>).
+          Example: <code>192.168.14.190:19132</code>. On BDS ≥1.26.60 the join path is
+          <strong>NetherNet</strong> (TCP signaling on 19132 + UDP gameplay ports
+          <code>19140…</code>) — Add Server still uses <code>IP:19132</code>.
         </p>
 
         <h3 class="subhead">2. Add Server</h3>
         <ol class="guide">
           <li>Launch <strong>Minecraft</strong> (Bedrock) → <strong>Play</strong> → <strong>Servers</strong>.</li>
           <li><strong>Add Server</strong> → enter name + the VIP and port from status.</li>
+          <li>Match client build to the server pin (e.g. mcpelauncher <strong>1.26.62.1</strong>).</li>
           <li>Join. Whitelist / permissions are managed on the server console (Phase 2 helpers coming).</li>
         </ol>
 
         <h3 class="subhead">3. Why LAN browse fails</h3>
         <p>
           Kubernetes does not forward UDP broadcasts. Friends / LAN discovery usually will
-          <strong>not</strong> see the pod. Always use the Gateway VIP:port from status, enable
+          <strong>not</strong> see the pod. Always use the VIP:port from status, enable
           <code>spec.hostNetworkDiscovery</code> (trade-offs), or run a BedrockConnect companion.
         </p>
 
         <ul class="ports">
-          <li><span class="ports__label">Game</span> <span class="ports__value">19132 / UDP (default)</span></li>
-          <li><span class="ports__label">IPv6</span> <span class="ports__value">19133 / UDP when <code>settings.ipv6Enabled</code></span></li>
-          <li><span class="ports__label">NetherNet</span> <span class="ports__value">19132 / TCP (Gateway TCPRoute)</span></li>
+          <li><span class="ports__label">Join</span> <span class="ports__value">19132 / TCP — <code>GET /v1/join</code> (NetherNet default)</span></li>
+          <li><span class="ports__label">Gameplay</span> <span class="ports__value">UDP <code>19140</code>…<code>19140+maxPlayers-1</code> via <code>SERVER_UDP_PORTS</code></span></li>
+          <li><span class="ports__label">Exposure</span> <span class="ports__value">Prefer direct LoadBalancer VIP; Envoy does not yet cover the UDP range</span></li>
         </ul>
       </div>
     </section>
@@ -239,6 +242,14 @@ kubectl get bedrockserver survival-1 -n game-servers \
             <p>
               Pod networking does not forward UDP broadcasts. Share the VIP:port, or see
               <a href="BEDROCK_SERVER.md">BEDROCK_SERVER.md</a> for hostNetwork / BedrockConnect notes.
+            </p>
+          </details>
+          <details>
+            <summary>Should I use Envoy Gateway?</summary>
+            <p>
+              Prefer a direct kube-vip / MetalLB Service for NetherNet joins today.
+              Envoy’s UDPRoute path still only covers 19132 and can rewrite source IPs —
+              see <a href="ARCHITECTURE.md">ARCHITECTURE.md</a>.
             </p>
           </details>
           <details>

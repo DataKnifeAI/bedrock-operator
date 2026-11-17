@@ -51,7 +51,13 @@ func (r *BedrockServerReconciler) reconcileGatewayStack(
 		msg := "gateway disabled; using Service only (set gateway.serviceType=NodePort|LoadBalancer)"
 		addr := server.Spec.Gateway.Address
 		if server.Spec.Gateway.ServiceType == corev1.ServiceTypeLoadBalancer && addr != "" {
-			msg = fmt.Sprintf("gateway disabled; Service LoadBalancer VIP %s (UDP %d)", addr, gamecfg.ServerPort(server.Spec))
+			port := gamecfg.ServerPort(server.Spec)
+			if gamecfg.Transport(server.Spec) == bedrockv1alpha1.TransportNetherNet {
+				msg = fmt.Sprintf("gateway disabled; Service LoadBalancer VIP %s (TCP %d + UDP %d-%d)",
+					addr, port, gamecfg.UdpGameplayPortStart(server.Spec), gamecfg.UdpGameplayPortEnd(server.Spec))
+			} else {
+				msg = fmt.Sprintf("gateway disabled; Service LoadBalancer VIP %s (UDP %d)", addr, port)
+			}
 		}
 		return gatewayResult{Configured: true, Address: addr, Message: msg}, nil
 	}

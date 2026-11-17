@@ -79,13 +79,19 @@ func EnvFromSpec(spec bedrockv1alpha1.BedrockServerSpec, fallbackLevelName strin
 		// Bedrock 1.26+ uses allow-list / ALLOW_LIST; WHITE_LIST remains for older images.
 		{Name: "ALLOW_LIST", Value: boolStr(s.WhiteList)},
 		{Name: "WHITE_LIST", Value: boolStr(s.WhiteList)},
-		// TRANSPORT selects raknet (UDP 19132) vs nethernet (TCP /v1/join).
+		{Name: "ONLINE_MODE", Value: boolStr(onlineMode(s))},
+		// TRANSPORT: nethernet required on BDS ≥1.26.60 for player joins.
 		{Name: "TRANSPORT", Value: transport},
 		{Name: "SERVER_PORT", Value: strconv.FormatInt(int64(port), 10)},
 		{Name: "SERVER_PORT_V6", Value: strconv.FormatInt(int64(portV6), 10)},
 	}
 	if seed := strings.TrimSpace(s.LevelSeed); seed != "" {
 		env = append(env, corev1.EnvVar{Name: "LEVEL_SEED", Value: seed})
+	}
+	if transport == bedrockv1alpha1.TransportNetherNet {
+		if udp := ServerUdpPorts(spec); udp != "" {
+			env = append(env, corev1.EnvVar{Name: "SERVER_UDP_PORTS", Value: udp})
+		}
 	}
 
 	versionEnv, err := VersionEnv(spec.Version)
@@ -126,13 +132,54 @@ func VersionEnv(v bedrockv1alpha1.VersionConfig) ([]corev1.EnvVar, error) {
 	return env, nil
 }
 
-// Transport returns the effective TRANSPORT value (default raknet).
+// Transport returns the effective TRANSPORT value (default nethernet).
 func Transport(spec bedrockv1alpha1.BedrockServerSpec) string {
 	t := strings.ToLower(strings.TrimSpace(spec.Settings.Transport))
 	if t == "" {
 		return bedrockv1alpha1.DefaultTransport
 	}
 	return t
+}
+
+// MaxPlayers returns the effective player cap.
+func MaxPlayers(spec bedrockv1alpha1.BedrockServerSpec) int32 {
+	if spec.Settings.MaxPlayers > 0 {
+		return spec.Settings.MaxPlayers
+	}
+	return bedrockv1alpha1.DefaultMaxPlayers
+}
+
+// UdpGameplayPortStart returns the first NetherNet gameplay UDP port.
+func UdpGameplayPortStart(spec bedrockv1alpha1.BedrockServerSpec) int32 {
+	return bedrockv1alpha1.DefaultUdpPortStart
+}
+
+// UdpGameplayPortEnd returns the last NetherNet gameplay UDP port (inclusive).
+func UdpGameplayPortEnd(spec bedrockv1alpha1.BedrockServerSpec) int32 {
+	n := MaxPlayers(spec)
+	if n < 1 {
+		n = 1
+	}
+	return UdpGameplayPortStart(spec) + n - 1
+}
+
+// ServerUdpPorts returns SERVER_UDP_PORTS for NetherNet.
+// Prefer explicit spec.settings.serverUdpPorts; otherwise derive
+// "<publicIP>:<start>-<end>:<start>-<end>" from gateway.address so clients
+// behind kube-vip reach the VIP (itzg NAT form).
+func ServerUdpPorts(spec bedrockv1alpha1.BedrockServerSpec) string {
+	if v := strings.TrimSpace(spec.Settings.ServerUdpPorts); v != "" {
+		return v
+	}
+	start := UdpGameplayPortStart(spec)
+	end := UdpGameplayPortEnd(spec)
+	rangeStr := fmt.Sprintf("%d-%d", start, end)
+	publicIP := strings.TrimSpace(spec.Gateway.Address)
+	if publicIP == "" {
+		return rangeStr
+	}
+	// publicIP:publicRange:localRange — advertise VIP to clients.
+	return fmt.Sprintf("%s:%s:%s", publicIP, rangeStr, rangeStr)
 }
 
 // ServerPort returns the effective IPv4 game port.
@@ -215,6 +262,13 @@ func ValidateSpec(spec bedrockv1alpha1.BedrockServerSpec) error {
 		return fmt.Errorf("spec.settings.transport %q is not supported (raknet|nethernet)", spec.Settings.Transport)
 	}
 	return nil
+}
+
+func onlineMode(s bedrockv1alpha1.ServerSettings) bool {
+	if s.OnlineMode == nil {
+		return true
+	}
+	return *s.OnlineMode
 }
 
 func boolStr(v bool) string {

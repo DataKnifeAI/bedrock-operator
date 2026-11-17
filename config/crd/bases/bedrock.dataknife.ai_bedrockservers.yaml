@@ -341,6 +341,13 @@ spec:
                     maximum: 30
                     minimum: 1
                     type: integer
+                  onlineMode:
+                    default: true
+                    description: |-
+                      OnlineMode maps to ONLINE_MODE / online-mode. Default true (Xbox Live auth).
+                      Set false only on trusted LAN for mcpelauncher testing when the Xbox
+                      join/trust prompt never appears; remote clients may still require Xbox auth.
+                    type: boolean
                   serverPort:
                     description: ServerPort overrides SERVER_PORT (default 19132).
                     format: int32
@@ -354,14 +361,20 @@ spec:
                     maximum: 65535
                     minimum: 1024
                     type: integer
+                  serverUdpPorts:
+                    description: |-
+                      ServerUdpPorts maps to SERVER_UDP_PORTS (NetherNet gameplay UDP).
+                      Empty: operator derives "<gateway.address>:<start>-<end>:<start>-<end>"
+                      with start=19140 and end=start+maxPlayers-1 (itzg NAT form so clients
+                      reach the VIP). Ignored when transport=raknet.
+                      Example: "192.168.14.190:19140-19149:19140-19149"
+                    type: string
                   transport:
-                    default: raknet
+                    default: nethernet
                     description: |-
                       Transport maps to TRANSPORT / server.properties transport.
-                      raknet: classic UDP on SERVER_PORT (needed for IP:port joins / mcpelauncher).
-                      nethernet: TCP signaling on SERVER_PORT (/v1/join) + ephemeral UDP gameplay
-                      (BDS ≥1.26.50 default; clients must use NetherNet-capable join path).
-                      Default raknet for Phase 1 dedicated-IP practicality.
+                      nethernet (default): required on BDS ≥1.26.60 — TCP /v1/join + UDP gameplay range.
+                      raknet: legacy UDP on SERVER_PORT; BDS ≥1.26.60 refuses player joins.
                     enum:
                     - raknet
                     - nethernet

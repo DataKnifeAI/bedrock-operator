@@ -17,21 +17,25 @@ Mojang does **not** permit redistributing BDS binaries in published images. This
   which downloads BDS from Mojang at container startup
 - Requires `spec.eula.accepted: true` (maps to `EULA=TRUE`) before creating children
 
-## Data path
+## Data path (recommended: direct VIP)
 
 ```
-Clients → spec.gateway.address (Kube-VIP / MetalLB)
+Clients → spec.gateway.address (Kube-VIP / MetalLB LoadBalancer)
               ↓
-      {base}-gateway  (GatewayClass: envoy)
-              ↓
-   UDPRoute (19132, optional 19133) + TCPRoute (NetherNet TCP 19132)
-              ↓
-      {name}-envoy  (ClusterIP)  →  {name} (ClusterIP)
+      {name} Service  TCP 19132 + UDP 19140…(19140+maxPlayers-1)
               ↓
       StatefulSet  (itzg/minecraft-bedrock-server)  replicas=1
               ↓
       PVC (/data)  — worlds, server package, properties, permissions, packs
 ```
+
+Set `gateway.enabled: false`, `serviceType: LoadBalancer`, and `gateway.address`.
+The operator sets `TRANSPORT=nethernet` and `SERVER_UDP_PORTS` in VIP form so
+clients reach gameplay behind kube-vip.
+
+Optional Envoy path (`gateway.enabled: true`) still wires TCP/UDP **19132** only —
+it does **not** yet expose the NetherNet gameplay UDP range, so prefer the direct
+VIP for joins on BDS ≥1.26.60.
 
 LAN discovery (UDP broadcast) does **not** work through pod networking. Opt into
 `spec.hostNetworkDiscovery: true` for LAN, or point consoles at a BedrockConnect
@@ -44,25 +48,22 @@ companion (Phase 3 / docs note). Direct IP:port via `.status` always works.
 | StatefulSet | Single-instance BDS pod (`replicas` hard-capped at 1; Recreate semantics) |
 | PersistentVolumeClaim | `/data` — worlds + runtime-downloaded server package |
 | Secret | Optional `operators.json` / `allowlist.json` when `secrets.generateSecrets` |
-| Service (ClusterIP) | Game UDP + NetherNet TCP; console/exec target |
-| Service (Envoy backend) | `{name}-envoy` ClusterIP |
-| Gateway + EnvoyProxy | External VIP binding |
-| UDPRoute | Game `19132/UDP` (+ `19133/UDP` when `settings.ipv6Enabled`) |
-| TCPRoute | NetherNet TCP signaling on the game port (Bedrock ≥ 1.26.50) |
+| Service | LoadBalancer/ClusterIP: NetherNet TCP 19132 + UDP gameplay range (or legacy RakNet UDP) |
+| Service (Envoy backend) | `{name}-envoy` ClusterIP (optional Gateway path) |
+| Gateway + EnvoyProxy | External VIP binding (optional; 19132 only today) |
+| UDPRoute | Game `19132/UDP` (+ `19133/UDP` when `settings.ipv6Enabled`) — not the 19140+ range yet |
+| TCPRoute | NetherNet TCP signaling on the game port |
 
 If UDPRoute support is unavailable in the cluster, set `gateway.enabled: false` and use
 `gateway.serviceType: LoadBalancer` with `gateway.address`.
 
-**Envoy vs direct VIP:** Bedrock ≥1.26.50 image default is NetherNet
-(`transport=nethernet`) — status/signaling is **TCP HTTP** on the game port
-(`GET /v1/join`), not classic RakNet UDP. The operator defaults
-`settings.transport=raknet` so mcpelauncher / Add Server IP:port joins work on UDP
-19132; set `nethernet` only for NetherNet-capable clients. Envoy TCPRoute is fine for
-the NetherNet path. If joins still fail after versions match (generic “connection
-failed” / WebRTC ICE), prefer the Dragonwilds pattern: `gateway.enabled: false` +
-`serviceType: LoadBalancer` + `address` so kube-vip hits the pod without Envoy UDP
-source-IP rewrite. Trade-off: loses Gateway policy / shared Envoy dataplane; gains a
-direct VIP like `dragonwilds-server`.
+**Envoy vs direct VIP:** BDS ≥1.26.60 requires NetherNet (`transport=nethernet`) —
+TCP `GET /v1/join` on the game port plus a UDP gameplay range (`SERVER_UDP_PORTS`,
+default `19140`…`19140+maxPlayers-1`). The operator defaults to NetherNet and
+exposes that UDP range on the Service. Prefer the Dragonwilds pattern for
+gameplay UDP: `gateway.enabled: false` + `serviceType: LoadBalancer` + `address`
+so kube-vip hits the pod without Envoy UDP source-IP rewrite. Envoy TCPRoute alone
+is not enough for joins once NetherNet needs the UDP range behind the VIP.
 
 ## Design rules
 
@@ -88,7 +89,7 @@ direct VIP like `dragonwilds-server`.
 |--|------------------|-------------------|
 | Image | Community itzg (runtime-download) | Official Pocketpair |
 | CRD | `BedrockServer` | `PalworldServer` |
-| Primary port | `19132/UDP` (+ TCP NetherNet) | `8211/UDP` |
+| Primary port | NetherNet: TCP `19132` + UDP `19140…` | `8211/UDP` |
 | Config | Env → `server.properties` | ConfigMap → `PalWorldSettings.ini` |
 | Admin API | Console only (stdin / exec) | REST |
 | Updates | Mojang feed + runtime download | Image-level `autoUpdateImage` |

@@ -38,18 +38,21 @@ const (
 	DefaultMaxPlayers      = int32(10)
 	DefaultPersistenceSize = "8Gi"
 	DefaultGraceSeconds    = int64(60)
-	DefaultUpdateInterval  = "6h"
-	DefaultTransport       = TransportRakNet
+	DefaultUpdateInterval = "6h"
+	// DefaultTransport is nethernet — BDS ≥1.26.60 rejects raknet for player joins.
+	DefaultTransport     = TransportNetherNet
+	DefaultUdpPortStart  = int32(19140)
 
 	VersionModeLatest   = "LATEST"
 	VersionModePreview  = "PREVIEW"
 	VersionModePrevious = "PREVIOUS"
 	VersionModePinned   = "PINNED"
 
-	// TransportRakNet is classic UDP on SERVER_PORT (19132) — required for
-	// mcpelauncher / external-server IP:port joins.
+	// TransportRakNet is classic UDP on SERVER_PORT (19132). Unsupported for
+	// player joins on BDS ≥1.26.60 (server logs TRANSPORT TYPE ERROR).
 	TransportRakNet = "raknet"
-	// TransportNetherNet is BDS ≥1.26.50 default (TCP /v1/join + ephemeral UDP).
+	// TransportNetherNet is required on BDS ≥1.26.60: TCP /v1/join on SERVER_PORT
+	// plus a UDP gameplay range (SERVER_UDP_PORTS).
 	TransportNetherNet = "nethernet"
 
 	ContainerName = "bedrock"
@@ -144,15 +147,28 @@ type ServerSettings struct {
 	// +optional
 	WhiteList bool `json:"whiteList,omitempty"`
 
+	// OnlineMode maps to ONLINE_MODE / online-mode. Default true (Xbox Live auth).
+	// Set false only on trusted LAN for mcpelauncher testing when the Xbox
+	// join/trust prompt never appears; remote clients may still require Xbox auth.
+	// +kubebuilder:default=true
+	// +optional
+	OnlineMode *bool `json:"onlineMode,omitempty"`
+
 	// Transport maps to TRANSPORT / server.properties transport.
-	// raknet: classic UDP on SERVER_PORT (needed for IP:port joins / mcpelauncher).
-	// nethernet: TCP signaling on SERVER_PORT (/v1/join) + ephemeral UDP gameplay
-	// (BDS ≥1.26.50 default; clients must use NetherNet-capable join path).
-	// Default raknet for Phase 1 dedicated-IP practicality.
-	// +kubebuilder:default=raknet
+	// nethernet (default): required on BDS ≥1.26.60 — TCP /v1/join + UDP gameplay range.
+	// raknet: legacy UDP on SERVER_PORT; BDS ≥1.26.60 refuses player joins.
+	// +kubebuilder:default=nethernet
 	// +kubebuilder:validation:Enum=raknet;nethernet
 	// +optional
 	Transport string `json:"transport,omitempty"`
+
+	// ServerUdpPorts maps to SERVER_UDP_PORTS (NetherNet gameplay UDP).
+	// Empty: operator derives "<gateway.address>:<start>-<end>:<start>-<end>"
+	// with start=19140 and end=start+maxPlayers-1 (itzg NAT form so clients
+	// reach the VIP). Ignored when transport=raknet.
+	// Example: "192.168.14.190:19140-19149:19140-19149"
+	// +optional
+	ServerUdpPorts string `json:"serverUdpPorts,omitempty"`
 
 	// IPv6Enabled controls SERVER_PORT_V6 and a second Gateway UDP listener (19133).
 	// +optional

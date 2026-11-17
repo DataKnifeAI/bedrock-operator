@@ -60,7 +60,7 @@ func BuildPVC(server *bedrockv1alpha1.BedrockServer) *corev1.PersistentVolumeCla
 	return pvc
 }
 
-// BuildService exposes game UDP (+ IPv6 UDP) and NetherNet TCP for probes/console.
+// BuildService exposes NetherNet TCP signaling + gameplay UDP range (or legacy RakNet UDP).
 func BuildService(server *bedrockv1alpha1.BedrockServer) *corev1.Service {
 	port := gamecfg.ServerPort(server.Spec)
 	svcType := corev1.ServiceTypeClusterIP
@@ -68,13 +68,8 @@ func BuildService(server *bedrockv1alpha1.BedrockServer) *corev1.Service {
 		svcType = server.Spec.Gateway.ServiceType
 	}
 
+	transport := gamecfg.Transport(server.Spec)
 	ports := []corev1.ServicePort{
-		{
-			Name:       "game-udp",
-			Protocol:   corev1.ProtocolUDP,
-			Port:       port,
-			TargetPort: intstr.FromInt32(port),
-		},
 		{
 			Name:       "nethernet-tcp",
 			Protocol:   corev1.ProtocolTCP,
@@ -82,14 +77,32 @@ func BuildService(server *bedrockv1alpha1.BedrockServer) *corev1.Service {
 			TargetPort: intstr.FromInt32(port),
 		},
 	}
-	if server.Spec.Settings.IPv6Enabled {
-		v6 := gamecfg.ServerPortV6(server.Spec)
+	if transport == bedrockv1alpha1.TransportRakNet {
 		ports = append(ports, corev1.ServicePort{
-			Name:       "game-udp-v6",
+			Name:       "game-udp",
 			Protocol:   corev1.ProtocolUDP,
-			Port:       v6,
-			TargetPort: intstr.FromInt32(v6),
+			Port:       port,
+			TargetPort: intstr.FromInt32(port),
 		})
+		if server.Spec.Settings.IPv6Enabled {
+			v6 := gamecfg.ServerPortV6(server.Spec)
+			ports = append(ports, corev1.ServicePort{
+				Name:       "game-udp-v6",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       v6,
+				TargetPort: intstr.FromInt32(v6),
+			})
+		}
+	} else {
+		// NetherNet: one UDP gameplay port per concurrent player (itzg SERVER_UDP_PORTS).
+		for p := gamecfg.UdpGameplayPortStart(server.Spec); p <= gamecfg.UdpGameplayPortEnd(server.Spec); p++ {
+			ports = append(ports, corev1.ServicePort{
+				Name:       "nether-udp-" + strconv.FormatInt(int64(p), 10),
+				Protocol:   corev1.ProtocolUDP,
+				Port:       p,
+				TargetPort: intstr.FromInt32(p),
+			})
+		}
 	}
 
 	spec := corev1.ServiceSpec{
@@ -147,15 +160,26 @@ func BuildStatefulSet(server *bedrockv1alpha1.BedrockServer, env []corev1.EnvVar
 	port := gamecfg.ServerPort(server.Spec)
 	resources := defaultResources(server)
 
+	transport := gamecfg.Transport(server.Spec)
 	containerPorts := []corev1.ContainerPort{
-		{Name: "game-udp", ContainerPort: port, Protocol: corev1.ProtocolUDP},
 		{Name: "nethernet", ContainerPort: port, Protocol: corev1.ProtocolTCP},
 	}
-	if server.Spec.Settings.IPv6Enabled {
-		v6 := gamecfg.ServerPortV6(server.Spec)
+	if transport == bedrockv1alpha1.TransportRakNet {
 		containerPorts = append(containerPorts, corev1.ContainerPort{
-			Name: "game-udp-v6", ContainerPort: v6, Protocol: corev1.ProtocolUDP,
+			Name: "game-udp", ContainerPort: port, Protocol: corev1.ProtocolUDP,
 		})
+		if server.Spec.Settings.IPv6Enabled {
+			v6 := gamecfg.ServerPortV6(server.Spec)
+			containerPorts = append(containerPorts, corev1.ContainerPort{
+				Name: "game-udp-v6", ContainerPort: v6, Protocol: corev1.ProtocolUDP,
+			})
+		}
+	} else {
+		for p := gamecfg.UdpGameplayPortStart(server.Spec); p <= gamecfg.UdpGameplayPortEnd(server.Spec); p++ {
+			containerPorts = append(containerPorts, corev1.ContainerPort{
+				Name: "nudp-" + strconv.FormatInt(int64(p), 10), ContainerPort: p, Protocol: corev1.ProtocolUDP,
+			})
+		}
 	}
 
 	portStr := strconv.FormatInt(int64(port), 10)

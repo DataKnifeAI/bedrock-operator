@@ -24,9 +24,10 @@ kubectl apply -f config/samples/bedrock_v1alpha1_bedrockserver.yaml
 kubectl get bedrockservers -o wide
 ```
 
-Connect clients to `status.connectionAddress`:`status.connectionPort` (default UDP 19132).
-Example: `192.168.14.190:19132`. How to obtain Bedrock on Windows, console, mobile, and
-Linux (mcpelauncher): [CLIENT.md](CLIENT.md).
+Connect clients to `status.connectionAddress`:`status.connectionPort` (default **19132**).
+Example: `192.168.14.190:19132`. On BDS ≥1.26.60 that is NetherNet TCP join + UDP
+gameplay range `19140…` (opened on the Service automatically). How to obtain Bedrock
+on Windows, console, mobile, and Linux (mcpelauncher): [CLIENT.md](CLIENT.md).
 
 **LAN discovery** (Friends tab / local network browse) does not work through pod
 networking — UDP broadcasts are not forwarded. Use the VIP:port directly, enable
@@ -63,18 +64,18 @@ BedrockConnect companion later.
 | `settings.allowCheats` | `ALLOW_CHEATS` |
 | `settings.defaultPlayerPermissionLevel` | `DEFAULT_PLAYER_PERMISSION_LEVEL` |
 | `settings.whiteList` | `ALLOW_LIST` and `WHITE_LIST` (1.26+ uses allow-list) |
-| `settings.transport` | `TRANSPORT` — `raknet` (default) \| `nethernet` |
+| `settings.onlineMode` | `ONLINE_MODE` — default `true` (Xbox Live). Set `false` only on trusted LAN (mcpelauncher without Xbox trust UI); remote clients may still require Xbox auth |
+| `settings.transport` | `TRANSPORT` — `nethernet` (default, required ≥1.26.60) \| `raknet` (legacy) |
+| `settings.serverUdpPorts` | `SERVER_UDP_PORTS` — optional; defaults to VIP form `address:19140–(19140+maxPlayers-1)` |
 | `settings.serverPort` | `SERVER_PORT` (default 19132) |
 | `settings.ipv6Enabled` | enables `SERVER_PORT_V6` + second UDPRoute |
 
 Only known keys are admitted.
 
-**Transport:** Phase 1 defaults to `raknet` so clients can join via `IP:port` over
-classic UDP 19132 (mcpelauncher external-server, console Add Server, etc.). BDS
-≥1.26.50 defaults to NetherNet when unset in the image; the operator overrides that
-with `TRANSPORT=raknet`. Set `settings.transport: nethernet` only when clients use
-the NetherNet signaling path (`GET /v1/join` on TCP 19132 + ephemeral UDP gameplay) —
-classic UDP ping / external-server join will not work in that mode.
+**Transport:** Default is `nethernet` (required on BDS ≥1.26.60). The operator sets
+`TRANSPORT=nethernet`, derives `SERVER_UDP_PORTS` (VIP form when `gateway.address`
+is set), and exposes TCP 19132 plus UDP `19140`…`19140+maxPlayers-1` on the Service.
+`raknet` remains available only for older BDS builds that still accept it.
 
 ## Updates
 

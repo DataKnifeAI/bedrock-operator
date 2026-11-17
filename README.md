@@ -7,7 +7,8 @@
 Kubernetes operator for [Minecraft Bedrock Dedicated Server](https://www.minecraft.net/en-us/download/server/bedrock)
 (BDS). Sibling to [palworld-operator](https://github.com/DataKnifeAI/palworld-operator) /
 [dragonwilds-operator](https://github.com/DataKnifeAI/dragonwilds-operator): Go/kubebuilder,
-CRD-first, Envoy Gateway (UDP + NetherNet TCP).
+CRD-first. Defaults to **NetherNet** (TCP join + UDP gameplay range on a direct
+LoadBalancer VIP); optional Envoy Gateway for 19132-only paths.
 
 **Site:** [dataknifeai.github.io/bedrock-operator](https://dataknifeai.github.io/bedrock-operator/)  
 **Repos:** [GitHub](https://github.com/DataKnifeAI/bedrock-operator)
@@ -61,8 +62,10 @@ spec:
     gameMode: survival
     difficulty: normal
     maxPlayers: 10
+    transport: nethernet   # default; required on BDS ≥1.26.60
   gateway:
-    enabled: true
+    enabled: false         # prefer direct VIP for NetherNet UDP range
+    serviceType: LoadBalancer
     address: "10.0.0.50"
   persistence:
     size: 8Gi

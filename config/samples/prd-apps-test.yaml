@@ -1,5 +1,5 @@
 # Production-shaped deploy for prd-apps game-servers.
-# Direct Service LoadBalancer VIP (Envoy bypass / dragonwilds pattern) for RakNet IP:port joins.
+# NetherNet (BDS ≥1.26.60): TCP 19132 signaling + UDP gameplay range on the VIP.
 # kubectl apply -f config/samples/prd-apps-test.yaml
 apiVersion: bedrock.dataknife.ai/v1alpha1
 kind: BedrockServer
@@ -17,8 +17,7 @@ spec:
     image: itzg/minecraft-bedrock-server:latest
     pullPolicy: IfNotPresent
 
-  # Pin to the mcpelauncher client build in use (1.26.62.1). LATEST (1.26.65+)
-  # advertises protocol 2225 and causes mcpelauncher "connection failed" on older clients.
+  # Pin to the mcpelauncher client build in use (1.26.62.1).
   version:
     mode: PINNED
     pinned: "1.26.62.1"
@@ -31,9 +30,12 @@ spec:
     allowCheats: false
     defaultPlayerPermissionLevel: member
     whiteList: false
-    # raknet = classic UDP 19132 for mcpelauncher / Add Server IP:port joins.
-    # nethernet = TCP /v1/join (not for external-server UDP join).
-    transport: raknet
+    # BDS ≥1.26.60 requires nethernet (raknet refuses player joins).
+    # Operator advertises SERVER_UDP_PORTS on the VIP and opens UDP 19140–19149.
+    transport: nethernet
+    # LAN-only: skip Xbox Live auth for mcpelauncher when join/trust UI never
+    # appears. Do NOT use false on internet-exposed servers.
+    onlineMode: false
     ipv6Enabled: false
 
   secrets:
@@ -47,7 +49,7 @@ spec:
     checkInterval: 6h
     notifyOnly: true
 
-  # Envoy bypass: kube-vip hits the pod directly (same pattern as dragonwilds-server).
+  # Direct kube-vip LB (Envoy bypass). TCP 19132 + UDP gameplay range.
   gateway:
     enabled: false
     serviceType: LoadBalancer

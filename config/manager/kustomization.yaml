@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: harbor.dataknife.net/library/bedrock-operator
-  newTag: 5434b01
+  newTag: joinfix-20261117084844

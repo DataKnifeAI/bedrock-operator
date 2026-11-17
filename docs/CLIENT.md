@@ -142,7 +142,8 @@ After the `BedrockServer` is Ready, admins share:
 status.connectionAddress:status.connectionPort
 ```
 
-Default port is **19132** / UDP. Example: `192.168.14.190:19132` or
+Default join address is **`IP:19132`** (NetherNet TCP signaling; gameplay uses UDP
+`19140…` behind the scenes). Example: `192.168.14.190:19132` or
 `minecraft.dataknife.net:19132`.
 
 ```bash
@@ -151,18 +152,24 @@ kubectl get bedrockserver <name> -n <ns> \
   -o jsonpath='{.status.connectionAddress}:{.status.connectionPort}{"\n"}'
 ```
 
-### Transport: RakNet vs NetherNet
+### Transport: NetherNet (default) vs RakNet
 
 | `spec.settings.transport` | Client join path |
 |---------------------------|------------------|
-| `raknet` (**default**) | Classic UDP on 19132 — **Add Server** / mcpelauncher external-server `IP:port` |
-| `nethernet` | TCP `GET /v1/join` signaling + ephemeral UDP gameplay (official NetherNet clients) |
+| `nethernet` (**default**, required on BDS ≥1.26.60) | TCP `GET /v1/join` on 19132 + UDP gameplay range `19140…` (advertised via `SERVER_UDP_PORTS`) |
+| `raknet` (legacy) | Classic UDP on 19132 — only works on older BDS builds that still accept RakNet |
 
-IP:port joins (including mcpelauncher) need **`raknet`**. With `nethernet`, the
-server listens on TCP 19132 for `/v1/join` and does **not** answer classic UDP
-unconnected pings on 19132 — external-server join fails even when curl to
-`/v1/join` succeeds. Prefer keeping the Phase 1 default (`raknet`) unless you
-intentionally run a NetherNet-only client path.
+BDS ≥1.26.60 hard-errors if `transport=raknet` and **refuses player joins**. The
+operator therefore defaults to NetherNet, opens TCP 19132 plus UDP `19140` through
+`19140+maxPlayers-1` on the Service/VIP, and sets `SERVER_UDP_PORTS` to the VIP form
+so clients reach gameplay behind kube-vip.
+
+mcpelauncher / official Bedrock still connect with **Add Server → `IP:19132`**; the
+client uses TCP join then the UDP range. Classic UDP-only “ping” tools on 19132 will
+look incomplete — that is expected under NetherNet.
+
+For trusted LAN testing with mcpelauncher (no Xbox join/trust UI), set
+`settings.onlineMode: false`. Keep **`true`** (default) on anything internet-reachable.
 
 ### In-game (PC / mobile / Linux launcher)
 
@@ -174,20 +181,22 @@ intentionally run a NetherNet-only client path.
 ### Version must match (mcpelauncher)
 
 Bedrock rejects joins when the client build and dedicated-server build disagree
-(often a generic **connection failed**). With `transport=raknet`, confirm the
-server answers UDP on 19132 (see [BEDROCK_SERVER.md](BEDROCK_SERVER.md)); version
-is pinned on the CR (`spec.version.mode=PINNED`). With NetherNet you can also
-check:
+(often a generic **connection failed**). Pin the server (`spec.version.mode=PINNED`)
+to the same build as the client. Verify NetherNet signaling:
 
 ```bash
 curl -sS "http://192.168.14.190:19132/v1/join"
-# {"version":"1.26.62","protocol":…, …}  # only when transport=nethernet
+# {"version":"1.26.62","protocol":…, …}
 ```
 
 On Linux, installed builds live under `~/.local/share/mcpelauncher/versions/`
 (see `versions.ini`). In **mcpelauncher-ui-qt**, pick the version that matches
 the server pin (or `version` from `/v1/join`). Microsoft login is still required
-when the server has `online-mode=true` (default).
+when the server has `online-mode=true` (default). For trusted LAN testing with
+mcpelauncher (especially when join fails immediately with no Xbox join/trust UI),
+set `spec.settings.onlineMode: false` (`ONLINE_MODE=false`). Prefer connecting by
+VIP (`192.168.14.190:19132`) over hostname if DNS/IPv6 is suspect. Do not disable
+online mode on internet-exposed servers.
 
 ### Why LAN discovery fails
 
