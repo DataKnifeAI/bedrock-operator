@@ -1,5 +1,9 @@
 # bedrock-operator
 
+<p align="center">
+  <img src="docs/assets/hero-bedrock.jpg" alt="Bedrock Operator — cuboid world keeper" width="640">
+</p>
+
 Kubernetes operator for [Minecraft Bedrock Dedicated Server](https://www.minecraft.net/en-us/download/server/bedrock)
 (BDS). Sibling to [palworld-operator](https://github.com/DataKnifeAI/palworld-operator) /
 [dragonwilds-operator](https://github.com/DataKnifeAI/dragonwilds-operator): Go/kubebuilder,
