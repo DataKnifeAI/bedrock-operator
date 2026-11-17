@@ -53,6 +53,14 @@ companion (Phase 3 / docs note). Direct IP:port via `.status` always works.
 If UDPRoute support is unavailable in the cluster, set `gateway.enabled: false` and use
 `gateway.serviceType: LoadBalancer` with `gateway.address`.
 
+**Envoy vs direct VIP:** Bedrock ≥1.26.50 uses NetherNet (`transport=nethernet`) —
+status/signaling is **TCP HTTP** on the game port (`GET /v1/join`), not classic RakNet
+UDP. Envoy TCPRoute is fine for that path. If joins still fail after versions match
+(generic “connection failed” / WebRTC ICE), prefer the Dragonwilds pattern:
+`gateway.enabled: false` + `serviceType: LoadBalancer` + `address` so kube-vip hits the
+pod without Envoy UDP source-IP rewrite. Trade-off: loses Gateway policy / shared Envoy
+dataplane; gains a direct VIP like `dragonwilds-server`.
+
 ## Design rules
 
 | Rule | Why |

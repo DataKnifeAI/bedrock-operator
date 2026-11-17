@@ -156,6 +156,22 @@ kubectl get bedrockserver <name> -n <ns> \
 2. **Add Server** → enter Name + the `IP:port` from status.
 3. Join. If the world uses a whitelist, an operator must allow your gamertag first.
 
+### Version must match (mcpelauncher)
+
+Bedrock rejects joins when the client build and dedicated-server build disagree
+(often a generic **connection failed**). Check the server advertisement:
+
+```bash
+curl -sS "http://192.168.14.190:19132/v1/join"
+# {"version":"1.26.62","protocol":…, …}
+```
+
+On Linux, installed builds live under `~/.local/share/mcpelauncher/versions/`
+(see `versions.ini`). In **mcpelauncher-ui-qt**, pick the version that matches
+`version` from `/v1/join` (or pin the CR with `spec.version.mode=PINNED` +
+`spec.version.pinned` to the client build). Microsoft login is still required when
+the server has `online-mode=true` (default).
+
 ### Why LAN discovery fails
 
 Kubernetes does not forward UDP broadcasts. Friends/LAN browse usually will **not** see

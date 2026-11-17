@@ -1,4 +1,5 @@
-# Production-shaped deploy for prd-apps game-servers (Envoy Gateway UDP + NetherNet TCP).
+# Production-shaped deploy for prd-apps game-servers.
+# Direct Service LoadBalancer VIP (Envoy bypass / dragonwilds pattern) for NetherNet joins.
 # kubectl apply -f config/samples/prd-apps-test.yaml
 apiVersion: bedrock.dataknife.ai/v1alpha1
 kind: BedrockServer
@@ -16,8 +17,11 @@ spec:
     image: itzg/minecraft-bedrock-server:latest
     pullPolicy: IfNotPresent
 
+  # Pin to the mcpelauncher client build in use (1.26.62.1). LATEST (1.26.65+)
+  # advertises protocol 2225 and causes mcpelauncher "connection failed" on older clients.
   version:
-    mode: LATEST
+    mode: PINNED
+    pinned: "1.26.62.1"
 
   settings:
     levelName: survival-1
@@ -40,10 +44,11 @@ spec:
     checkInterval: 6h
     notifyOnly: true
 
+  # Envoy bypass: kube-vip hits the pod directly (same pattern as dragonwilds-server).
   gateway:
-    enabled: true
+    enabled: false
+    serviceType: LoadBalancer
     address: "192.168.14.190"
-    className: envoy
 
   nodeSelector:
     kubernetes.io/arch: amd64

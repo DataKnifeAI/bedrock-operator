@@ -78,8 +78,12 @@ and sets `status.availableVersion` / `status.updateAvailable`.
   the next pod restart re-downloads (runtime-download analogue of Palworld’s
   `autoUpdateImage`).
 
-Prefer `VERSION=LATEST` in production. Older builds (notably ≤1.19.80) had auth issues —
-do not recommend pinning ancient versions in production docs.
+Prefer `VERSION=LATEST` in production **when clients can update to match**. Bedrock
+rejects mismatched client/server builds (often as a generic “connection failed”).
+Check `GET http://<VIP>:19132/v1/join` for the advertised `version` / `protocol`, and
+either update mcpelauncher’s installed build or set `spec.version.mode=PINNED` with
+`spec.version.pinned` to the client version. Older builds (notably ≤1.19.80) had auth
+issues — do not recommend pinning ancient versions in production docs.
 
 ## Persistence & recreate
 
