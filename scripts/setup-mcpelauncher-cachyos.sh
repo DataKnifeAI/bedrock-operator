@@ -3,8 +3,9 @@
 # Companion to docs/CLIENT.md — does NOT redistribute Mojang binaries.
 #
 # Usage:
-#   ./scripts/setup-mcpelauncher-cachyos.sh           # diagnose only
-#   ./scripts/setup-mcpelauncher-cachyos.sh --install  # diagnose, then prompt to install
+#   ./scripts/setup-mcpelauncher-cachyos.sh              # diagnose only
+#   ./scripts/setup-mcpelauncher-cachyos.sh --install    # diagnose, then prompt to install
+#   ./scripts/setup-mcpelauncher-cachyos.sh --fix-path  # user-local PATH fix for DE/app-menu
 #
 # Refs:
 #   https://github.com/minecraft-linux/mcpelauncher-manifest/issues/796
@@ -13,11 +14,13 @@
 set -euo pipefail
 
 INSTALL=0
+FIX_PATH=0
 for arg in "$@"; do
   case "$arg" in
     --install|-i) INSTALL=1 ;;
+    --fix-path) FIX_PATH=1 ;;
     -h|--help)
-      sed -n '2,14p' "$0"
+      sed -n '2,15p' "$0"
       exit 0
       ;;
     *)
@@ -26,7 +29,6 @@ for arg in "$@"; do
       ;;
   esac
 done
-
 RED=$'\033[31m'
 GRN=$'\033[32m'
 YEL=$'\033[33m'
@@ -153,7 +155,12 @@ else
   note "client binary not at $BIN_CLIENT (path differs for -git builds)"
 fi
 
-# --- PATH / profile.d ---
+# --- PATH / profile.d / DE session ---
+LOCAL_BIN="${HOME}/.local/bin"
+ENV_D="${HOME}/.config/environment.d/99-mcpelauncher-path.conf"
+USER_DESKTOP="${HOME}/.local/share/applications/mcpelauncher-ui-qt.desktop"
+OPT_BIN_DIR=/opt/mcpelauncher-bin/bin
+
 if [[ -f "$PROFILE_D" ]]; then
   ok "profile.d script $PROFILE_D"
 else
@@ -164,16 +171,52 @@ else
   fi
 fi
 
-if have_cmd mcpelauncher-ui-qt || have_cmd mcpelauncher-client; then
-  ok "launcher commands on PATH"
-elif [[ -x "$BIN_UI" ]]; then
-  note "binaries exist but not on PATH in this shell"
+SHELL_HAS_CLIENT=0
+SHELL_HAS_UI=0
+have_cmd mcpelauncher-client && SHELL_HAS_CLIENT=1
+have_cmd mcpelauncher-ui-qt && SHELL_HAS_UI=1
+
+if [[ $SHELL_HAS_CLIENT -eq 1 && $SHELL_HAS_UI -eq 1 ]]; then
+  ok "mcpelauncher-client and mcpelauncher-ui-qt on PATH (this shell)"
+elif [[ $SHELL_HAS_UI -eq 1 && $SHELL_HAS_CLIENT -eq 0 ]]; then
+  note "UI on PATH but mcpelauncher-client missing — Play will fail from this shell"
+  hint "source $PROFILE_D  or: ./scripts/setup-mcpelauncher-cachyos.sh --fix-path"
+elif [[ -x "$BIN_UI" || -x "$BIN_CLIENT" ]]; then
+  note "binaries exist under $OPT_BIN_DIR but not on PATH in this shell"
   hint "source $PROFILE_D   # or open a new login session"
-  hint "or run directly: $BIN_UI"
+  hint "or: ./scripts/setup-mcpelauncher-cachyos.sh --fix-path"
 else
   note "launcher not on PATH yet"
 fi
 
+# App-menu / systemd --user often skips profile.d (common "Game not found" cause)
+DE_PATH=""
+if command -v systemctl &>/dev/null; then
+  DE_PATH=$(systemctl --user show-environment 2>/dev/null | sed -n 's/^PATH=//p' || true)
+fi
+if [[ -n "$DE_PATH" ]]; then
+  if [[ ":$DE_PATH:" == *":$OPT_BIN_DIR:"* ]] || [[ ":$DE_PATH:" == *":$LOCAL_BIN:"* && -L "$LOCAL_BIN/mcpelauncher-client" ]]; then
+    ok "desktop/systemd user PATH can resolve mcpelauncher-client"
+  else
+    note "desktop/systemd user PATH lacks $OPT_BIN_DIR (and usable ~/.local/bin client link)"
+    hint "App menu launches skip profile.d → UI error: 'Could not find the gamelauncher… mcpelauncher-client'"
+    hint "Fix: ./scripts/setup-mcpelauncher-cachyos.sh --fix-path   then re-open from app menu (or log out/in)"
+  fi
+else
+  info "could not read systemd --user PATH (skipping DE PATH check)"
+fi
+
+if [[ -f "$ENV_D" ]]; then
+  ok "user environment.d drop-in $ENV_D"
+else
+  if [[ -x "$BIN_CLIENT" ]]; then
+    info "no $ENV_D yet — recommended so DE sessions see mcpelauncher on PATH"
+  fi
+fi
+
+if [[ -f "$USER_DESKTOP" ]] && grep -q 'mcpelauncher-bin/bin' "$USER_DESKTOP" 2>/dev/null; then
+  ok "user desktop override sets launcher PATH: $USER_DESKTOP"
+fi
 # --- Multilib runtime libs (issue #796 + upstream troubleshooting) ---
 info "checking 32-bit runtime deps (audio/GL for older / AppImage-style paths)"
 for pkg in lib32-mesa lib32-libpulse lib32-alsa-plugins; do
@@ -273,10 +316,78 @@ echo
 printf '%sLicense:%s bedrock-operator / this script never redistribute Mojang client binaries.\n' "$BOLD" "$RST"
 echo "Docs: https://mcpelauncher.readthedocs.io/  |  Arch deps list: mcpelauncher-manifest#796"
 
+# --- User-local PATH fix (DE / app-menu) ---
+apply_fix_path() {
+  echo
+  printf '%sUser-local PATH fix (no sudo)%s\n' "$BOLD" "$RST"
+
+  if [[ ! -x "$BIN_CLIENT" ]]; then
+    bad "missing $BIN_CLIENT — install mcpelauncher-linux-bin first"
+    return 1
+  fi
+
+  mkdir -p "$LOCAL_BIN" "${HOME}/.config/environment.d" "${HOME}/.local/share/applications"
+
+  local b
+  for b in mcpelauncher-client mcpelauncher-ui-qt mcpelauncher-extract mcpelauncher-error mcpelauncher-webview; do
+    if [[ -x "$OPT_BIN_DIR/$b" ]]; then
+      ln -sfn "$OPT_BIN_DIR/$b" "$LOCAL_BIN/$b"
+      ok "symlink $LOCAL_BIN/$b -> $OPT_BIN_DIR/$b"
+    fi
+  done
+
+  cat > "$ENV_D" <<EOF
+# mcpelauncher-*-bin installs under /opt; DE/app-menu launches skip /etc/profile.d.
+# Ensures ~/.local/bin (user symlinks) and the opt bin dir are visible to systemd --user.
+PATH=${LOCAL_BIN}:${OPT_BIN_DIR}:\${PATH}
+EOF
+  ok "wrote $ENV_D"
+
+  cat > "$USER_DESKTOP" <<EOF
+[Desktop Entry]
+Name=Minecraft Bedrock Launcher
+Comment=A Minecraft: Bedrock Edition (earlier: Pocket Edition launcher)
+Exec=env PATH="${LOCAL_BIN}:${OPT_BIN_DIR}:/usr/local/bin:/usr/bin:/bin" ${BIN_UI} %U
+Icon=mcpelauncher-ui-qt
+MimeType=application/zip
+Type=Application
+Categories=Game;
+Terminal=false
+EOF
+  ok "wrote $USER_DESKTOP (Exec sets PATH for app-menu)"
+
+  if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database "${HOME}/.local/share/applications" 2>/dev/null || true
+  fi
+
+  if command -v systemctl &>/dev/null; then
+    local cur new
+    cur=$(systemctl --user show-environment 2>/dev/null | sed -n 's/^PATH=//p' || true)
+    if [[ -n "$cur" ]]; then
+      new="${LOCAL_BIN}:${OPT_BIN_DIR}:${cur}"
+      systemctl --user set-environment "PATH=${new}" 2>/dev/null && \
+        ok "updated current systemd --user PATH for this session" || \
+        note "could not update systemd --user PATH (log out/in after environment.d)"
+    fi
+  fi
+
+  echo
+  info "Verify: PATH=\$(systemctl --user show-environment | sed -n 's/^PATH=//p') command -v mcpelauncher-client"
+  info "Relaunch Minecraft Bedrock Launcher from the app menu (close any old UI first)."
+  info "environment.d is also applied on next full login."
+  return 0
+}
+
+if [[ $FIX_PATH -eq 1 ]]; then
+  apply_fix_path
+  exit $?
+fi
+
 # --- Guided install ---
 if [[ $INSTALL -ne 1 ]]; then
   echo
   info "Re-run with --install for interactive package install prompts (no silent --noconfirm)."
+  info "If the UI says gamelauncher/mcpelauncher-client not found: re-run with --fix-path."
   exit $([[ $fail -eq 0 ]] && echo 0 || echo 1)
 fi
 
@@ -300,9 +411,15 @@ if ((${#UNIQUE[@]} == 0)); then
     echo "  source $PROFILE_D"
     echo "  mcpelauncher-ui-qt"
   fi
+  echo
+  read -r -p "Apply user-local PATH fix for app-menu / DE launches? [Y/n] " ans
+  if [[ -z "${ans}" || "${ans,,}" == "y" || "${ans,,}" == "yes" ]]; then
+    apply_fix_path
+  else
+    info "skipped --fix-path (run later if Play says mcpelauncher-client not found)"
+  fi
   exit 0
 fi
-
 REPO_PKGS=()
 AUR_PKGS=()
 for p in "${UNIQUE[@]}"; do
@@ -342,6 +459,7 @@ if ((${#AUR_PKGS[@]})); then
 fi
 
 echo
-info "After install: source $PROFILE_D   (or new login), then: mcpelauncher-ui-qt"
+info "After install: ./scripts/setup-mcpelauncher-cachyos.sh --fix-path"
+info "Or: source $PROFILE_D   (shell only), then: mcpelauncher-ui-qt"
 info "Re-run this script without --install to verify."
 exit 0

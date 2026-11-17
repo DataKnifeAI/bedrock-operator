@@ -42,12 +42,14 @@ There is **no official** Mojang Bedrock client for Linux. Community option:
 From a clone of this repo:
 
 ```bash
-./scripts/setup-mcpelauncher-cachyos.sh           # check only
-./scripts/setup-mcpelauncher-cachyos.sh --install # check, then prompt for packages
+./scripts/setup-mcpelauncher-cachyos.sh              # check only
+./scripts/setup-mcpelauncher-cachyos.sh --install    # check, then prompt for packages
+./scripts/setup-mcpelauncher-cachyos.sh --fix-path  # ~/.local/bin + environment.d for DE
 ```
 
 The script detects Arch/CachyOS, AUR helpers (`paru`/`yay`), mcpelauncher packages,
-`/etc/profile.d` PATH hints, common multilib libs ([upstream dep list](https://github.com/minecraft-linux/mcpelauncher-manifest/issues/796)),
+`/etc/profile.d` vs desktop/systemd PATH gaps, common multilib libs
+([upstream dep list](https://github.com/minecraft-linux/mcpelauncher-manifest/issues/796)),
 Wayland/Qt hints, and prints Google Play ownership steps. It does **not** use
 `--noconfirm` and never redistributes Mojang binaries.
 
@@ -63,14 +65,36 @@ Also install multilib audio/GL deps if missing (script checks these):
 sudo pacman -S lib32-mesa lib32-libpulse lib32-alsa-plugins
 ```
 
-**PATH note:** the UI binary lives at `/opt/mcpelauncher-bin/bin/mcpelauncher-ui-qt`.
-After install, either open a **new login session** or:
+**PATH / app-menu note:** binaries live under `/opt/mcpelauncher-bin/bin/`
+(`mcpelauncher-ui-qt`, `mcpelauncher-client`, …). The package drops
+`/etc/profile.d/mcpelauncher-bin.sh`, but **app-menu / systemd user sessions do not
+source profile.d**, so the UI can start (or be found via a full path) while Play
+fails with:
 
-```bash
-source /etc/profile.d/mcpelauncher-bin.sh
+```text
+Could not find the gamelauncher for Minecraft (x86_64)
+Please add the launcher 'mcpelauncher-client' to your 'PATH'
 ```
 
-Then run `mcpelauncher-ui-qt` (or start it from your app menu once PATH is updated).
+Fix (user-local, no sudo) — the setup script can apply this with `--fix-path`:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sfn /opt/mcpelauncher-bin/bin/mcpelauncher-client ~/.local/bin/
+ln -sfn /opt/mcpelauncher-bin/bin/mcpelauncher-ui-qt ~/.local/bin/
+# …optionally extract/error/webview
+
+mkdir -p ~/.config/environment.d
+cat > ~/.config/environment.d/99-mcpelauncher-path.conf <<'EOF'
+PATH=$HOME/.local/bin:/opt/mcpelauncher-bin/bin:${PATH}
+EOF
+
+# Prefer the script's --fix-path: it also writes a user .desktop with Exec=env PATH=...
+```
+
+For a shell only: `source /etc/profile.d/mcpelauncher-bin.sh`, then
+`mcpelauncher-ui-qt`. After `environment.d`, **log out and back in** (or re-launch
+from the user `.desktop` override) so the app menu inherits PATH.
 
 On **Wayland**, if the Qt UI fails to appear:
 
