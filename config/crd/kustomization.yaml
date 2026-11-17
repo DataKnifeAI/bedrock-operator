@@ -1,0 +1,3 @@
+resources:
+- bases/bedrock.dataknife.ai_bedrockservers.yaml
+# +kubebuilder:scaffold:crdkustomizeresource

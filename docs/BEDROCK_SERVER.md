@@ -1,0 +1,95 @@
+# BedrockServer
+
+Deploy a Minecraft Bedrock Dedicated Server (BDS) with a `BedrockServer` custom resource.
+
+## License & EULA
+
+This operator **does not** bundle or redistribute Mojang software. The default image
+[`itzg/minecraft-bedrock-server`](https://hub.docker.com/r/itzg/minecraft-bedrock-server)
+downloads BDS from Mojang at container startup. You must accept the Minecraft EULA:
+
+```yaml
+spec:
+  eula:
+    accepted: true
+```
+
+If `accepted` is not `true`, reconcile sets `status.phase=Failed` and creates **no**
+child resources (same hard gate as the image’s `EULA=TRUE` requirement).
+
+## Quick start
+
+```bash
+kubectl apply -f config/samples/bedrock_v1alpha1_bedrockserver.yaml
+kubectl get bedrockservers -o wide
+```
+
+Connect clients to `status.connectionAddress`:`status.connectionPort` (default UDP 19132).
+
+**LAN discovery** (Friends tab / local network browse) does not work through pod
+networking — UDP broadcasts are not forwarded. Use the VIP:port directly, enable
+`spec.hostNetworkDiscovery: true` (trade-offs: host ports, weaker isolation), or run a
+BedrockConnect companion later.
+
+## Spec overview
+
+| Field | Purpose |
+|-------|---------|
+| `eula.accepted` | Required Mojang EULA gate |
+| `serverImage.image` | Default `itzg/minecraft-bedrock-server:latest` |
+| `version.mode` | `LATEST` \| `PREVIEW` \| `PREVIOUS` \| `PINNED` |
+| `version.pinned` | Exact version when `mode=PINNED` (e.g. `1.21.93.05`) |
+| `version.directDownloadUrl` | Bypass Mojang lookup (air-gapped / pinned zip) |
+| `settings.*` | Typed `server.properties` → itzg env vars |
+| `persistence` | PVC size / storageClass / `existingClaim` for DR |
+| `update.checkInterval` | Mojang feed poll interval (default `6h`) |
+| `update.notifyOnly` | Default `true` — status only; `false` may patch download URL |
+| `gateway` | Envoy Gateway VIP or Service LoadBalancer fallback |
+| `hostNetworkDiscovery` | Opt-in `hostNetwork` for LAN discovery |
+| `mods` / `adminUI` | Phase 2 / Phase 3 stubs |
+
+### Settings → env
+
+| Spec | Env |
+|------|-----|
+| `settings.levelName` | `LEVEL_NAME` |
+| `settings.levelSeed` | `LEVEL_SEED` |
+| `settings.levelType` | `LEVEL_TYPE` |
+| `settings.gameMode` | `GAMEMODE` |
+| `settings.difficulty` | `DIFFICULTY` |
+| `settings.maxPlayers` | `MAX_PLAYERS` |
+| `settings.allowCheats` | `ALLOW_CHEATS` |
+| `settings.defaultPlayerPermissionLevel` | `DEFAULT_PLAYER_PERMISSION_LEVEL` |
+| `settings.whiteList` | `WHITE_LIST` |
+| `settings.serverPort` | `SERVER_PORT` (default 19132) |
+| `settings.ipv6Enabled` | enables `SERVER_PORT_V6` + second UDPRoute |
+
+Only known keys are admitted.
+
+## Updates
+
+The reconciler polls Mojang’s public download-links API (same feed the itzg image uses)
+and sets `status.availableVersion` / `status.updateAvailable`.
+
+- **Default (`notifyOnly: true`)**: status only — never mutates the pod.
+- **`notifyOnly: false`**: may set `spec.version.directDownloadUrl` to the latest zip so
+  the next pod restart re-downloads (runtime-download analogue of Palworld’s
+  `autoUpdateImage`).
+
+Prefer `VERSION=LATEST` in production. Older builds (notably ≤1.19.80) had auth issues —
+do not recommend pinning ancient versions in production docs.
+
+## Persistence & recreate
+
+Worlds live under `/data/worlds` on the PVC. The StatefulSet is single-replica; rolling
+the pod (Recreate semantics) is safe as long as the PVC survives. Use
+`persistence.existingClaim` to adopt a restored volume.
+
+## Admin console (Phase 2)
+
+BDS has no REST/RCON. Administration is the interactive console (`tty`/`stdin` enabled).
+Phase 2 adds annotation-triggered `kubectl exec` / `send-command` helpers.
+
+## Sample
+
+See [examples/bedrockserver-sample.yaml](../examples/bedrockserver-sample.yaml).

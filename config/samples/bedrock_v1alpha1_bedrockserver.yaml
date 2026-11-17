@@ -1,0 +1,32 @@
+apiVersion: bedrock.dataknife.ai/v1alpha1
+kind: BedrockServer
+metadata:
+  name: survival-1
+  namespace: default
+spec:
+  eula:
+    accepted: true
+  serverImage:
+    image: itzg/minecraft-bedrock-server:latest
+  version:
+    mode: LATEST
+  settings:
+    levelName: survival-1
+    gameMode: survival
+    difficulty: normal
+    maxPlayers: 10
+    allowCheats: false
+    defaultPlayerPermissionLevel: member
+    whiteList: false
+    ipv6Enabled: false
+  persistence:
+    size: 8Gi
+  update:
+    checkInterval: 6h
+    notifyOnly: true
+  gateway:
+    enabled: true
+    address: "10.0.0.50"   # replace with your VIP
+    className: envoy
+  secrets:
+    generateSecrets: true
