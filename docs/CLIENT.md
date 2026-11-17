@@ -37,10 +37,30 @@ operator address (see below).
 There is **no official** Mojang Bedrock client for Linux. Community option:
 [mcpelauncher](https://mcpelauncher.readthedocs.io/).
 
+### Helper script (diagnose + guided install)
+
+From a clone of this repo:
+
+```bash
+./scripts/setup-mcpelauncher-cachyos.sh           # check only
+./scripts/setup-mcpelauncher-cachyos.sh --install # check, then prompt for packages
+```
+
+The script detects Arch/CachyOS, AUR helpers (`paru`/`yay`), mcpelauncher packages,
+`/etc/profile.d` PATH hints, common multilib libs ([upstream dep list](https://github.com/minecraft-linux/mcpelauncher-manifest/issues/796)),
+Wayland/Qt hints, and prints Google Play ownership steps. It does **not** use
+`--noconfirm` and never redistributes Mojang binaries.
+
 ### AUR (recommended on Arch / CachyOS)
 
 ```bash
 paru -S mcpelauncher-linux-bin mcpelauncher-ui-bin
+```
+
+Also install multilib audio/GL deps if missing (script checks these):
+
+```bash
+sudo pacman -S lib32-mesa lib32-libpulse lib32-alsa-plugins
 ```
 
 **PATH note:** the UI binary lives at `/opt/mcpelauncher-bin/bin/mcpelauncher-ui-qt`.
@@ -52,6 +72,12 @@ source /etc/profile.d/mcpelauncher-bin.sh
 
 Then run `mcpelauncher-ui-qt` (or start it from your app menu once PATH is updated).
 
+On **Wayland**, if the Qt UI fails to appear:
+
+```bash
+QT_QPA_PLATFORM=xcb mcpelauncher-ui-qt
+```
+
 ### Flatpak alternative
 
 ```bash
@@ -59,11 +85,18 @@ flatpak install flathub io.mrarm.mcpelauncher
 flatpak run io.mrarm.mcpelauncher
 ```
 
+If the Flatpak UI hangs on Wayland:
+
+```bash
+flatpak run --nosocket=wayland io.mrarm.mcpelauncher
+```
+
 ### Google Play ownership
 
 mcpelauncher does not ship the game. You must own Minecraft on **Google Play** and
 authenticate so the launcher can download the APK you already purchased. This is a
-community project — not affiliated with Mojang / Microsoft.
+community project — not affiliated with Mojang / Microsoft. Neither the helper script
+nor bedrock-operator can buy the game or bypass license checks.
 
 ## Java Edition (Prism) — not for Bedrock servers
 
