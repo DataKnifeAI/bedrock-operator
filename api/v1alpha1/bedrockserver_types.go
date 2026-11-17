@@ -39,11 +39,18 @@ const (
 	DefaultPersistenceSize = "8Gi"
 	DefaultGraceSeconds    = int64(60)
 	DefaultUpdateInterval  = "6h"
+	DefaultTransport       = TransportRakNet
 
 	VersionModeLatest   = "LATEST"
 	VersionModePreview  = "PREVIEW"
 	VersionModePrevious = "PREVIOUS"
 	VersionModePinned   = "PINNED"
+
+	// TransportRakNet is classic UDP on SERVER_PORT (19132) — required for
+	// mcpelauncher / external-server IP:port joins.
+	TransportRakNet = "raknet"
+	// TransportNetherNet is BDS ≥1.26.50 default (TCP /v1/join + ephemeral UDP).
+	TransportNetherNet = "nethernet"
 
 	ContainerName = "bedrock"
 )
@@ -136,6 +143,16 @@ type ServerSettings struct {
 	// WhiteList maps to ALLOW_LIST (Bedrock 1.26+) and WHITE_LIST (older images).
 	// +optional
 	WhiteList bool `json:"whiteList,omitempty"`
+
+	// Transport maps to TRANSPORT / server.properties transport.
+	// raknet: classic UDP on SERVER_PORT (needed for IP:port joins / mcpelauncher).
+	// nethernet: TCP signaling on SERVER_PORT (/v1/join) + ephemeral UDP gameplay
+	// (BDS ≥1.26.50 default; clients must use NetherNet-capable join path).
+	// Default raknet for Phase 1 dedicated-IP practicality.
+	// +kubebuilder:default=raknet
+	// +kubebuilder:validation:Enum=raknet;nethernet
+	// +optional
+	Transport string `json:"transport,omitempty"`
 
 	// IPv6Enabled controls SERVER_PORT_V6 and a second Gateway UDP listener (19133).
 	// +optional

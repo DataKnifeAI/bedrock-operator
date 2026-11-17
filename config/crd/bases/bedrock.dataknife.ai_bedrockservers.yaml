@@ -354,6 +354,18 @@ spec:
                     maximum: 65535
                     minimum: 1024
                     type: integer
+                  transport:
+                    default: raknet
+                    description: |-
+                      Transport maps to TRANSPORT / server.properties transport.
+                      raknet: classic UDP on SERVER_PORT (needed for IP:port joins / mcpelauncher).
+                      nethernet: TCP signaling on SERVER_PORT (/v1/join) + ephemeral UDP gameplay
+                      (BDS ≥1.26.50 default; clients must use NetherNet-capable join path).
+                      Default raknet for Phase 1 dedicated-IP practicality.
+                    enum:
+                    - raknet
+                    - nethernet
+                    type: string
                   whiteList:
                     description: WhiteList maps to ALLOW_LIST (Bedrock 1.26+) and
                       WHITE_LIST (older images).

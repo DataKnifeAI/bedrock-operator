@@ -142,7 +142,8 @@ After the `BedrockServer` is Ready, admins share:
 status.connectionAddress:status.connectionPort
 ```
 
-Default port is **19132** / UDP. Example: `192.168.14.190:19132`.
+Default port is **19132** / UDP. Example: `192.168.14.190:19132` or
+`minecraft.dataknife.net:19132`.
 
 ```bash
 kubectl get bedrockservers -o wide
@@ -150,27 +151,43 @@ kubectl get bedrockserver <name> -n <ns> \
   -o jsonpath='{.status.connectionAddress}:{.status.connectionPort}{"\n"}'
 ```
 
+### Transport: RakNet vs NetherNet
+
+| `spec.settings.transport` | Client join path |
+|---------------------------|------------------|
+| `raknet` (**default**) | Classic UDP on 19132 — **Add Server** / mcpelauncher external-server `IP:port` |
+| `nethernet` | TCP `GET /v1/join` signaling + ephemeral UDP gameplay (official NetherNet clients) |
+
+IP:port joins (including mcpelauncher) need **`raknet`**. With `nethernet`, the
+server listens on TCP 19132 for `/v1/join` and does **not** answer classic UDP
+unconnected pings on 19132 — external-server join fails even when curl to
+`/v1/join` succeeds. Prefer keeping the Phase 1 default (`raknet`) unless you
+intentionally run a NetherNet-only client path.
+
 ### In-game (PC / mobile / Linux launcher)
 
 1. Open **Minecraft** (Bedrock) → **Play** → **Servers** (or **Friends** → add server).
-2. **Add Server** → enter Name + the `IP:port` from status.
+2. **Add Server** → enter Name + the `IP:port` from status (e.g.
+   `minecraft.dataknife.net` / `19132`).
 3. Join. If the world uses a whitelist, an operator must allow your gamertag first.
 
 ### Version must match (mcpelauncher)
 
 Bedrock rejects joins when the client build and dedicated-server build disagree
-(often a generic **connection failed**). Check the server advertisement:
+(often a generic **connection failed**). With `transport=raknet`, confirm the
+server answers UDP on 19132 (see [BEDROCK_SERVER.md](BEDROCK_SERVER.md)); version
+is pinned on the CR (`spec.version.mode=PINNED`). With NetherNet you can also
+check:
 
 ```bash
 curl -sS "http://192.168.14.190:19132/v1/join"
-# {"version":"1.26.62","protocol":…, …}
+# {"version":"1.26.62","protocol":…, …}  # only when transport=nethernet
 ```
 
 On Linux, installed builds live under `~/.local/share/mcpelauncher/versions/`
 (see `versions.ini`). In **mcpelauncher-ui-qt**, pick the version that matches
-`version` from `/v1/join` (or pin the CR with `spec.version.mode=PINNED` +
-`spec.version.pinned` to the client build). Microsoft login is still required when
-the server has `online-mode=true` (default).
+the server pin (or `version` from `/v1/join`). Microsoft login is still required
+when the server has `online-mode=true` (default).
 
 ### Why LAN discovery fails
 

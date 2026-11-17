@@ -63,10 +63,18 @@ BedrockConnect companion later.
 | `settings.allowCheats` | `ALLOW_CHEATS` |
 | `settings.defaultPlayerPermissionLevel` | `DEFAULT_PLAYER_PERMISSION_LEVEL` |
 | `settings.whiteList` | `ALLOW_LIST` and `WHITE_LIST` (1.26+ uses allow-list) |
+| `settings.transport` | `TRANSPORT` — `raknet` (default) \| `nethernet` |
 | `settings.serverPort` | `SERVER_PORT` (default 19132) |
 | `settings.ipv6Enabled` | enables `SERVER_PORT_V6` + second UDPRoute |
 
 Only known keys are admitted.
+
+**Transport:** Phase 1 defaults to `raknet` so clients can join via `IP:port` over
+classic UDP 19132 (mcpelauncher external-server, console Add Server, etc.). BDS
+≥1.26.50 defaults to NetherNet when unset in the image; the operator overrides that
+with `TRANSPORT=raknet`. Set `settings.transport: nethernet` only when clients use
+the NetherNet signaling path (`GET /v1/join` on TCP 19132 + ephemeral UDP gameplay) —
+classic UDP ping / external-server join will not work in that mode.
 
 ## Updates
 

@@ -63,6 +63,7 @@ func EnvFromSpec(spec bedrockv1alpha1.BedrockServerSpec, fallbackLevelName strin
 	if maxPlayers == 0 {
 		maxPlayers = bedrockv1alpha1.DefaultMaxPlayers
 	}
+	transport := Transport(spec)
 	port := ServerPort(spec)
 	portV6 := ServerPortV6(spec)
 
@@ -78,6 +79,8 @@ func EnvFromSpec(spec bedrockv1alpha1.BedrockServerSpec, fallbackLevelName strin
 		// Bedrock 1.26+ uses allow-list / ALLOW_LIST; WHITE_LIST remains for older images.
 		{Name: "ALLOW_LIST", Value: boolStr(s.WhiteList)},
 		{Name: "WHITE_LIST", Value: boolStr(s.WhiteList)},
+		// TRANSPORT selects raknet (UDP 19132) vs nethernet (TCP /v1/join).
+		{Name: "TRANSPORT", Value: transport},
 		{Name: "SERVER_PORT", Value: strconv.FormatInt(int64(port), 10)},
 		{Name: "SERVER_PORT_V6", Value: strconv.FormatInt(int64(portV6), 10)},
 	}
@@ -121,6 +124,15 @@ func VersionEnv(v bedrockv1alpha1.VersionConfig) ([]corev1.EnvVar, error) {
 		return nil, fmt.Errorf("spec.version.mode %q is not supported", mode)
 	}
 	return env, nil
+}
+
+// Transport returns the effective TRANSPORT value (default raknet).
+func Transport(spec bedrockv1alpha1.BedrockServerSpec) string {
+	t := strings.ToLower(strings.TrimSpace(spec.Settings.Transport))
+	if t == "" {
+		return bedrockv1alpha1.DefaultTransport
+	}
+	return t
 }
 
 // ServerPort returns the effective IPv4 game port.
@@ -197,6 +209,10 @@ func ValidateSpec(spec bedrockv1alpha1.BedrockServerSpec) error {
 		if _, err := time.ParseDuration(interval); err != nil {
 			return fmt.Errorf("spec.update.checkInterval: %w", err)
 		}
+	}
+	if t := strings.ToLower(strings.TrimSpace(spec.Settings.Transport)); t != "" &&
+		t != bedrockv1alpha1.TransportRakNet && t != bedrockv1alpha1.TransportNetherNet {
+		return fmt.Errorf("spec.settings.transport %q is not supported (raknet|nethernet)", spec.Settings.Transport)
 	}
 	return nil
 }

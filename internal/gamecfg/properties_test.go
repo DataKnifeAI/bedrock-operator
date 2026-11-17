@@ -65,10 +65,31 @@ func TestEnvFromSpec_SettingsMapping(t *testing.T) {
 	assertEq(t, got["DEFAULT_PLAYER_PERMISSION_LEVEL"], "operator")
 	assertEq(t, got["ALLOW_LIST"], "true")
 	assertEq(t, got["WHITE_LIST"], "true")
+	assertEq(t, got["TRANSPORT"], "raknet")
 	assertEq(t, got["VERSION"], "LATEST")
 	assertEq(t, got["SERVER_PORT"], "19132")
 	assertEq(t, got["SERVER_PORT_V6"], "19133")
 }
+
+func TestEnvFromSpec_TransportOverride(t *testing.T) {
+	spec := bedrockv1alpha1.BedrockServerSpec{
+		EULA:     bedrockv1alpha1.EULAConfig{Accepted: true},
+		Settings: bedrockv1alpha1.ServerSettings{Transport: "nethernet"},
+		Version:  bedrockv1alpha1.VersionConfig{Mode: "LATEST"},
+		Gateway:  bedrockv1alpha1.GatewayConfig{Enabled: boolPtr(false)},
+	}
+	env, err := EnvFromSpec(spec, "world")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, e := range env {
+		got[e.Name] = e.Value
+	}
+	assertEq(t, got["TRANSPORT"], "nethernet")
+}
+
+func boolPtr(v bool) *bool { return &v }
 
 func TestVersionEnv_PinnedRequiresValue(t *testing.T) {
 	_, err := VersionEnv(bedrockv1alpha1.VersionConfig{Mode: "PINNED"})

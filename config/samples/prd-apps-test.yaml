@@ -1,5 +1,5 @@
 # Production-shaped deploy for prd-apps game-servers.
-# Direct Service LoadBalancer VIP (Envoy bypass / dragonwilds pattern) for NetherNet joins.
+# Direct Service LoadBalancer VIP (Envoy bypass / dragonwilds pattern) for RakNet IP:port joins.
 # kubectl apply -f config/samples/prd-apps-test.yaml
 apiVersion: bedrock.dataknife.ai/v1alpha1
 kind: BedrockServer
@@ -31,6 +31,9 @@ spec:
     allowCheats: false
     defaultPlayerPermissionLevel: member
     whiteList: false
+    # raknet = classic UDP 19132 for mcpelauncher / Add Server IP:port joins.
+    # nethernet = TCP /v1/join (not for external-server UDP join).
+    transport: raknet
     ipv6Enabled: false
 
   secrets:
